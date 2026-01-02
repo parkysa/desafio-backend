@@ -34,7 +34,7 @@ public class StatisticsControllerTest {
     }
 
     @Nested
-    @DisplayName("When getStatistics is called")
+    @DisplayName("When getStatistics is called successfully")
     class WhenGetStatisticsIsCalled {
 
         private ResponseEntity<StatisticsResponse> response;
@@ -61,6 +61,40 @@ public class StatisticsControllerTest {
         @DisplayName("Then return 200 ok")
         public void return200Ok() {
             assertEquals(HttpStatus.OK, response.getStatusCode());
+        }
+    }
+
+    @Nested
+    @DisplayName("When getStatistics is called and an error occurred")
+    class WhenGetStatisticsIsCalledError {
+
+        private Throwable thrown;
+
+        @BeforeEach
+        void setUp() {
+            when(transactionService.getStatistics()).thenThrow(new RuntimeException("Database error"));
+
+            thrown = org.assertj.core.api.Assertions.catchThrowable(() ->
+                    statisticsController.getStatistics()
+            );
+        }
+
+        @Test
+        @DisplayName("Then throws exception")
+        void thenThrowsException() {
+            org.junit.jupiter.api.Assertions.assertInstanceOf(RuntimeException.class, thrown);
+        }
+
+        @Test
+        @DisplayName("Then has correct message")
+        void thenHasMessage() {
+            assertEquals("Database error", thrown.getMessage());
+        }
+
+        @Test
+        @DisplayName("Then verify service was called")
+        void thenVerifyService() {
+            verify(transactionService, times(1)).getStatistics();
         }
     }
 }

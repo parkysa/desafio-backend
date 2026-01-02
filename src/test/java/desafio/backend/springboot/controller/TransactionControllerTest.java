@@ -15,7 +15,9 @@ import org.springframework.http.ResponseEntity;
 
 import java.time.OffsetDateTime;
 
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -41,12 +43,10 @@ public class TransactionControllerTest {
         @Nested
         @DisplayName("And the call is a success")
         class AndTheCallIsSuccessfuly {
-
             private ResponseEntity<Void> response;
 
             @BeforeEach
             void setUp() {
-                // Cenário: Tudo válido
                 Transaction validTransaction = new Transaction(10.50, OffsetDateTime.now().minusSeconds(10));
                 response = transactionController.createTransaction(validTransaction);
             }
@@ -93,7 +93,6 @@ public class TransactionControllerTest {
 
                 @BeforeEach
                 void setUp() {
-                    // Cenário necessário para 100% Branches: Data OK, mas valor <= 0
                     Transaction invalidTransaction = new Transaction(-1.0, OffsetDateTime.now().minusSeconds(1));
                     response = transactionController.createTransaction(invalidTransaction);
                 }
@@ -111,24 +110,51 @@ public class TransactionControllerTest {
     @DisplayName("When deleteTransaction is called")
     class WhenDeleteTransactionIsCalled {
 
-        private ResponseEntity<Void> response;
+        @Nested
+        @DisplayName("And the call is a success")
+        class Success {
+            private ResponseEntity<Void> response;
 
-        @BeforeEach
-        void setUp() {
-            Transaction dummy = new Transaction(0.0, OffsetDateTime.now());
-            response = transactionController.deleteTransaction();
+            @BeforeEach
+            void setUp() {
+                response = transactionController.deleteTransaction();
+            }
+
+            @Test
+            @DisplayName("Then clearTransactions is called")
+            void thenClearTransactions() {
+                verify(transactionService, times(1)).clearTransactions();
+            }
+
+            @Test
+            @DisplayName("Then returns 200 ok")
+            void thenReturns200Ok() {
+                assertEquals(HttpStatus.OK, response.getStatusCode());
+            }
         }
 
-        @Test
-        @DisplayName("Then clearTransactions is called")
-        void thenClearTransactions() {
-            verify(transactionService, times(1)).clearTransactions();
-        }
+        @Nested
+        @DisplayName("And an error occurs")
+        class Error {
+            private Throwable thrown;
 
-        @Test
-        @DisplayName("Then returns 200 ok")
-        void thenReturns200Ok() {
-            assertEquals(HttpStatus.OK, response.getStatusCode());
+            @BeforeEach
+            void setUp() {
+                doThrow(new RuntimeException("Service failure")).when(transactionService).clearTransactions();
+                thrown = catchThrowable(() -> transactionController.deleteTransaction());
+            }
+
+            @Test
+            @DisplayName("Then throws RuntimeException")
+            void thenThrowsRuntimeException() {
+                assertInstanceOf(RuntimeException.class, thrown);
+            }
+
+            @Test
+            @DisplayName("Then contains original message")
+            void thenContainsMessage() {
+                assertEquals("java.lang.RuntimeException: Service failure", thrown.getMessage());
+            }
         }
     }
 }
