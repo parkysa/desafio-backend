@@ -116,7 +116,7 @@ public class TransactionControllerTest {
         @BeforeEach
         void setUp() {
             Transaction dummy = new Transaction(0.0, OffsetDateTime.now());
-            response = transactionController.deleteTransaction(dummy);
+            response = transactionController.deleteTransaction();
         }
 
         @Test
